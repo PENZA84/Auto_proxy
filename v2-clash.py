@@ -1,4 +1,4 @@
-# 说明 : 本脚本提供解析v2ray/ss/ssr/clashR/clashX订阅链接为Clash配置文件,仅供学习交流使用.
+# v2-clash.py  # 说明 : 本脚本提供解析v2ray/ss/ssr/clashR/clashX订阅链接为Clash配置文件,仅供学习交流使用.
 # https://github.com/Celeter/convert2clash
 import os, re, sys, json, base64, datetime
 import requests, yaml
@@ -131,7 +131,7 @@ def decode_trojan_node(nodes):
             part_list = re.split('#', parsed_url, maxsplit=1)
             info.setdefault('name', part_list[1])
             server_part = part_list[0].replace('trojan://', '')
-            server_part_list = re.split(':|@|\?|&', server_part)
+            server_part_list = re.split(r':|@|\?|&', server_part)
             info.setdefault('server', server_part_list[1])
             info.setdefault('port', int(server_part_list[2]))
             info.setdefault('type', 'trojan')
@@ -170,13 +170,13 @@ def get_proxies(urls):
     }
     # 请求订阅地址
     for url in url_list:
-        response = requests.get(url, headers=headers, timeout=5000).text
+        response = requests.get(url, headers=headers, timeout=5).text
         try:
             raw = base64.b64decode(response)
         except Exception as r:
             log('base64解码失败:{},应当为clash节点'.format(r))
             log('clash节点提取中...')
-            yml = yaml.load(response, Loader=yaml.FullLoader)
+            yml = yaml.safe_load(response)
             nodes_list = []
             tmp_list = []
             # clash新字段
@@ -380,9 +380,8 @@ def trojan_to_clash(arr):
 # 获取本地规则策略的配置文件
 def load_local_config(path):
     try:
-        f = open(path, 'r', encoding="utf-8")
-        local_config = yaml.load(f.read(), Loader=yaml.FullLoader)
-        f.close()
+        with open(path, 'r', encoding="utf-8") as f:
+            local_config = yaml.safe_load(f.read())
         return local_config
     except FileNotFoundError:
         log('配置文件加载失败')
@@ -392,8 +391,8 @@ def load_local_config(path):
 # 获取规则策略的配置文件
 def get_default_config(url, path):
     try:
-        raw = requests.get(url, timeout=5000).content.decode('utf-8')
-        template_config = yaml.load(raw, Loader=yaml.FullLoader)
+        raw = requests.get(url, timeout=5).content.decode('utf-8')
+        template_config = yaml.safe_load(raw)
     except requests.exceptions.RequestException:
         log('网络获取规则配置失败,加载本地配置文件')
         template_config = load_local_config(path)
@@ -445,7 +444,7 @@ def remove_duplicates(lst):
         if 'name' in item:
             domain = item['server']
 
-            pattern = '[^\u4e00-\u9fa5\d]+'
+            pattern = r'[^\u4e00-\u9fa5\d]+'
             item['name'] = re.sub(pattern, '', item['name'])
             item['name'] = re.sub(r'\d', '', item['name'])
             location = item['name'][:3]
@@ -462,34 +461,12 @@ def remove_duplicates(lst):
             result.append(item)
         i += 1
     return result
-'''
-def remove_duplicates(lst):
-    result = []
-    namesl = []
-    i = 1
-    for item in lst:
-        if 'name' in item and item['name'] not in namesl:
-            namesl.append(item['name'])
-            domain = item['server']
-            
-            pattern = '[^\u4e00-\u9fa5\d]+'
-            item['name'] = re.sub(pattern, '', item['name'])
-            item['name'] = re.sub(r'\d', '', item['name'])
-            location = item['name'][:3]
-            item['name'] = location + '_' +str(i)
-            #print(item)
-            result.append(item)
-        i += 1
-    #print(namesl)
-    #print(result)
-    return result
-'''
 
 
 #查询ip归属地
 def query_location(ip):
     # 使用第三方 IP 地址库查询 IP 归属地
-    # 这里使用的是 ipapi，它是一个免费的 IP 地址库，可以查询 IP 归属地和相关信息
+    # 这里使用的是 ipapi，它是一个免费 of IP 地址库，可以查询 IP 归属地和相关信息
     # 你可以在 https://ipapi.co/api/ 找到更多文档
     api_url = f"http://whois.pconline.com.cn/ipJson.jsp?ip={ip}&json=true"
     response = requests.get(api_url)
