@@ -9,17 +9,22 @@ def test_cfmem():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
     }
     try:
-        # 1. Запрашиваем страницу категории со всеми бесплатными статьями
+        # 1. Запрашиваем страницу со всеми бесплатными статьями
         res = requests.get("https://www.cfmem.com/search/label/free", headers=headers, timeout=10)
         res.raise_for_status()
         
-        # УЛЬТРА-ГИБКИЙ ПОИСК: Ищет любую ссылку на статью, содержащую /ГОД/МЕСЯЦ/ и заканчивающуюся на .html
-        article_match = re.search(r"https?://www\.cfmem\.com/\d{4}/\d{2}/[^\"'\s>]+?\.html", res.text)
-        if not article_match:
-            print("Ошибка: ссылка на статью на cfmem.com не найдена.")
+        # Находим ВЕЕ ВСЕ ссылки, похожие на статьи с датами
+        all_matches = re.findall(r"https?://www\.cfmem\.com/\d{4}/\d{2}/[^\"'\s>]+?\.html", res.text)
+        
+        # Фильтруем: убираем старую инструкцию-руководство из 2021 года
+        article_urls = [url for url in all_matches if "v2rayng.html" not in url]
+        
+        if not article_urls:
+            print("Ошибка: ссылка на свежую статью на cfmem.com не найдена.")
             return
             
-        article_url = article_match.group()
+        # Берем самую первую (актуальную) ссылку из оставшихся
+        article_url = article_urls[0]
         print(f"Найдена ссылка на свежую статью: {article_url}")
         
         # 2. Переходим внутрь найденной свежей статьи
