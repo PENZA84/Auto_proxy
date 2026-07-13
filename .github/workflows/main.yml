@@ -44,24 +44,26 @@ jobs:
       
     - name: 提交更改 (Commit changes)
       id: commit_check
-      run: |                 
+      run: |                  
         git config --local user.email '${{ secrets.EMAIL }}'
         git config --local user.name '${{ secrets.NAME }}'
         
-        # Подтягиваем изменения, если v2-clash.yml успел обновить репозиторий раньше
-        git pull origin main --rebase
-        
-        # Добавляем файлы одной маской (подхватит sub/*, все файлы Long_term_subscription и README)
+        # 1. Сначала железно сохраняем все новые файлы подписок в индекс Git
         git add ./sub/*
         git add ./Long_term_subscription*
         git add ./README.md
         
-        # Проверяем, изменилось ли что-то из добавленного
+        # 2. Проверяем, изменилось ли хоть что-то по сравнению с прошлым разом
         if git diff --cached --quiet; then
           echo "Изменений в подписках нет. Пропускаем коммит."
           echo "HAS_CHANGES=false" >> $GITHUB_ENV
         else
+          # 3. Делаем локальный коммит. Рабочая директория становится идеально ЧИСТОЙ!
           git commit -m "$(date '+%Y-%m-%d %H:%M:%S') sub_merge_node"
+          
+          # 4. Вот теперь pull выполняется без единой ошибки и конфликта!
+          git pull origin main --rebase
+          
           echo "HAS_CHANGES=true" >> $GITHUB_ENV
         fi
 
