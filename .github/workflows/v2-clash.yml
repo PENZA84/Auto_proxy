@@ -44,15 +44,18 @@ jobs:
 
     - name: 提交更改 (Commit changes)
       id: commit_check
-      run: |                 
+      run: |                  
         git config --local user.email '${{ secrets.EMAIL }}'
         git config --local user.name '${{ secrets.NAME }}'
-        git pull origin main --rebase
         
-        # Проверяем, изменился ли целевой файл, чтобы не ломать сборку пустым коммитом
+        # Твоя оригинальная проверка: изменился ли целевой файл output.yaml
         if git status --porcelain | grep -q "output.yaml"; then
           git add ./output.yaml
-          git commit -m "$(date '+%Y-%m-%d %H:%M:%S') sub_merge_node"
+          git commit -m "$(date '+%Y-%m-%d %H:%M:%S') v2_clash_update"
+          
+          # Безопасно подтягиваем изменения ТОЛЬКО ПОСЛЕ того, как сделали коммит
+          git pull origin main --rebase
+          
           echo "HAS_CHANGES=true" >> $GITHUB_ENV
         else
           echo "Изменений в output.yaml нет. Пропускаем шаг пуша."
