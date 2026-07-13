@@ -27,7 +27,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('./requirements.txt') }} # Исправлен путь к хэшу зависимостей
+        key: ${{ runner.os }}-pip-${{ hashFiles('./requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
@@ -45,23 +45,24 @@ jobs:
     - name: 提交更改 (Commit changes)
       id: commit_check
       run: |                  
-        git config --local user.email '${{ secrets.EMAIL }}'
-        git config --local user.name '${{ secrets.NAME }}'
+        # Защита от пустых секретов: если секрет пустой, включится стандартный бот
+        git config --local user.email "${{ secrets.EMAIL || 'github-actions[bot]@users.noreply.github.com' }}"
+        git config --local user.name "${{ secrets.NAME || 'github-actions[bot]' }}"
         
-        # 1. Сначала железно сохраняем все новые файлы подписок в индекс Git
+        # 1. Сохраняем новые файлы подписок
         git add ./sub/*
         git add ./Long_term_subscription*
         git add ./README.md
         
-        # 2. Проверяем, изменилось ли хоть что-то по сравнению с прошлым разом
+        # 2. Проверяем изменения
         if git diff --cached --quiet; then
           echo "Изменений в подписках нет. Пропускаем коммит."
           echo "HAS_CHANGES=false" >> $GITHUB_ENV
         else
-          # 3. Делаем локальный коммит. Рабочая директория становится идеально ЧИСТОЙ!
+          # 3. Делаем локальный коммит
           git commit -m "$(date '+%Y-%m-%d %H:%M:%S') sub_merge_node"
           
-          # 4. Вот теперь pull выполняется без единой ошибки и конфликта!
+          # 4. Безопасно делаем pull
           git pull origin main --rebase
           
           echo "HAS_CHANGES=true" >> $GITHUB_ENV
