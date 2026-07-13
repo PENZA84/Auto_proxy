@@ -1,48 +1,67 @@
 name: v2-clash
 
-# 触发条件
+# 触发条件 (Условия триггера)
 on:
-  #push:
   workflow_dispatch:
   schedule:
-    # - cron: '*/5 * * * *'
     # 表达式生成  https://crontab.guru/
+    # Запуск каждые 3 часа в 05 минут
     - cron: '05 */3 * * *'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Даём права на запись изменений обратно в репозиторий
+      
     steps:
-    - name: 迁出代码
-      uses: actions/checkout@v2
-    - name: 安装Python
-      uses: actions/setup-python@v2
+    - name: 迁出代码 (Checkout code)
+      uses: actions/checkout@v4 # Обновлено до актуальной v4
+
+    - name: 安装Python (Setup Python)
+      uses: actions/setup-python@v5 # Обновлено до актуальной v5
       with:
         python-version: '3.x'
-    - name: 加载缓存
-      uses: actions/cache@v2
+
+    - name: 加载缓存 (Load cache)
+      uses: actions/cache@v4 # Обновлено до v4 (убирает предупреждение GitHub)
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/run_in_Actions/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('./requirements.txt') }} # Исправлен путь к хэшу под реальный файл
         restore-keys: |
           ${{ runner.os }}-pip-
-    - name: 设置时区
+
+    - name: 设置时区 (Set Timezone)
       run: sudo timedatectl set-timezone 'Asia/Shanghai'
-    - name: 安装依赖
+
+    - name: 安装依赖 (Install dependencies)
       run: |
         pip install -r ./requirements.txt
-    - name: 执行任务
+
+    - name: 执行任务 (Execute script)
       run: |
-        #python ./v2-clash.py
         python ./Test.py
-    - name: 提交更改
+
+    - name: 提交更改 (Commit changes)
+      id: commit_check
       run: |                 
         git config --local user.email '${{ secrets.EMAIL }}'
         git config --local user.name '${{ secrets.NAME }}'
-        git pull origin main
-        git add ./output.yaml
-        git commit -m "$(date '+%Y-%m-%d %H:%M:%S') sub_merge_node"
-    - name: 推送更改
-      uses:  ad-m/github-push-action@master
+        git pull origin main --rebase
+        
+        # Проверяем, изменился ли целевой файл, чтобы не ломать сборку пустым коммитом
+        if git status --porcelain | grep -q "output.yaml"; then
+          git add ./output.yaml
+          git commit -m "$(date '+%Y-%m-%d %H:%M:%S') sub_merge_node"
+          echo "HAS_CHANGES=true" >> $GITHUB_ENV
+        else
+          echo "Изменений в output.yaml нет. Пропускаем шаг пуша."
+          echo "HAS_CHANGES=false" >> $GITHUB_ENV
+        fi
+
+    - name: 推送更改 (Push changes)
+      if: env.HAS_CHANGES == 'true'
+      uses: ad-m/github-push-action@master
       with:
         branch: main
+        github_token: ${{ secrets.GITHUB_TOKEN }}
