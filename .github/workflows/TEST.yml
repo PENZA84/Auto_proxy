@@ -1,34 +1,38 @@
 name: TEST
 
-# 触发条件
+# 触发条件 (Условия триггера)
 on:
-  #push:
-  workflow_dispatch:
+  workflow_dispatch: # Запуск только вручную из вкладки Actions
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: 迁出代码
-      uses: actions/checkout@v2
-    - name: 安装Python
-      uses: actions/setup-python@v2
+    - name: 迁出代码 (Checkout code)
+      uses: actions/checkout@v4
+
+    - name: 安装Python (Setup Python)
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
-    - name: 加载缓存
-      uses: actions/cache@v2
+
+    - name: 加载缓存 (Load cache)
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/run_in_Actions/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('./requirements.txt') }} # Исправлен путь к файлу зависимостей
         restore-keys: |
           ${{ runner.os }}-pip-
-    - name: 设置时区
+
+    - name: 设置时区 (Set Timezone)
       run: sudo timedatectl set-timezone 'Asia/Shanghai'
-    - name: 安装依赖
+
+    - name: 安装依赖 (Install dependencies)
       run: |
         pip install -r ./requirements.txt
-    - name: 执行任务
+
+    - name: 执行任务 (Execute script)
       run: |
         #python ./v2-clash.py
         #python ./TEST/Test_v2rayshare.py
         python ./TEST/Test_cfmem.py
-    
