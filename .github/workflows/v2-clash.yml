@@ -16,18 +16,18 @@ jobs:
       
     steps:
     - name: 迁出代码 (Checkout code)
-      uses: actions/checkout@v4 # Обновлено до актуальной v4
+      uses: actions/checkout@v4
 
     - name: 安装Python (Setup Python)
-      uses: actions/setup-python@v5 # Обновлено до актуальной v5
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
     - name: 加载缓存 (Load cache)
-      uses: actions/cache@v4 # Обновлено до v4 (убирает предупреждение GitHub)
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('./requirements.txt') }} # Исправлен путь к хэшу под реальный файл
+        key: ${{ runner.os }}-pip-${{ hashFiles('./requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
@@ -45,15 +45,16 @@ jobs:
     - name: 提交更改 (Commit changes)
       id: commit_check
       run: |                  
-        git config --local user.email '${{ secrets.EMAIL }}'
-        git config --local user.name '${{ secrets.NAME }}'
+        # Защита от пустых секретов: если секрет пустой, включится стандартный бот
+        git config --local user.email "${{ secrets.EMAIL || 'github-actions[bot]@users.noreply.github.com' }}"
+        git config --local user.name "${{ secrets.NAME || 'github-actions[bot]' }}"
         
-        # Твоя оригинальная проверка: изменился ли целевой файл output.yaml
+        # Твоя родная проверка файла output.yaml
         if git status --porcelain | grep -q "output.yaml"; then
           git add ./output.yaml
           git commit -m "$(date '+%Y-%m-%d %H:%M:%S') v2_clash_update"
           
-          # Безопасно подтягиваем изменения ТОЛЬКО ПОСЛЕ того, как сделали коммит
+          # Делаем pull строго ПОСЛЕ коммита
           git pull origin main --rebase
           
           echo "HAS_CHANGES=true" >> $GITHUB_ENV
